@@ -1,0 +1,84 @@
+version: '3.9'
+
+# Producción sin Nginx en Docker — el Nginx del sistema actúa como proxy
+# API expuesta en localhost:4000, Dashboard en localhost:3000
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: avn_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: aves_naturaleza
+      POSTGRES_USER: avn_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U avn_user -d aves_naturaleza"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: avn_redis
+    restart: always
+    volumes:
+      - redis_data:/data
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: avn_api
+    restart: always
+    ports:
+      - "127.0.0.1:4000:4000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://avn_user:${DB_PASSWORD}@postgres:5432/aves_naturaleza
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 30d
+      PORT: 4000
+      APP_URL: ${APP_URL}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      WOMPI_PUBLIC_KEY: ${WOMPI_PUBLIC_KEY}
+      WOMPI_PRIVATE_KEY: ${WOMPI_PRIVATE_KEY}
+      WOMPI_INTEGRITY_SECRET: ${WOMPI_INTEGRITY_SECRET}
+      WOMPI_EVENTS_SECRET: ${WOMPI_EVENTS_SECRET}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
+      FRONTEND_URL: ${FRONTEND_URL}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  dashboard:
+    build:
+      context: ./apps/dashboard
+      dockerfile: Dockerfile
+    container_name: avn_dashboard
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
+      NEXT_PUBLIC_APP_NAME: Aves y Naturaleza
+      NEXT_PUBLIC_WOMPI_PUBLIC_KEY: ${NEXT_PUBLIC_WOMPI_PUBLIC_KEY}
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
