@@ -190,6 +190,21 @@ CREATE TABLE user_parks_visited (
   PRIMARY KEY (user_id, park_name)
 );
 
+-- Transacciones Wompi
+CREATE TABLE wompi_transactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  reservation_id UUID REFERENCES reservations(id) ON DELETE CASCADE,
+  reference VARCHAR(100) UNIQUE NOT NULL,
+  wompi_id VARCHAR(200),
+  amount_cents INTEGER NOT NULL,
+  status VARCHAR(30) DEFAULT 'PENDING',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_wompi_reference ON wompi_transactions(reference);
+CREATE INDEX idx_wompi_reservation ON wompi_transactions(reservation_id);
+
 -- Sesiones / Tokens de refresh
 CREATE TABLE refresh_tokens (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

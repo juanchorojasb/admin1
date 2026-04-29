@@ -11,6 +11,7 @@ import toursRoutes from './modules/tours/tours.routes'
 import reservasRoutes from './modules/reservas/reservas.routes'
 import comisionesRoutes from './modules/comisiones/comisiones.routes'
 import aliadosRoutes from './modules/aliados/aliados.routes'
+import paymentsRoutes from './modules/payments/payments.routes'
 
 import { errorHandler, notFoundHandler } from './middleware/error.middleware'
 import { pool } from './config/db'
@@ -54,6 +55,7 @@ app.use(`${v1}/tours`, toursRoutes)
 app.use(`${v1}/reservas`, reservasRoutes)
 app.use(`${v1}/comisiones`, comisionesRoutes)
 app.use(`${v1}/aliados`, aliadosRoutes)
+app.use(`${v1}/payments`, paymentsRoutes)
 
 // Handlers de error
 app.use(notFoundHandler)
