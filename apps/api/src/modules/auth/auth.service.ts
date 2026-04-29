@@ -74,6 +74,11 @@ export async function register(dto: RegisterDto) {
   const payload = { userId: user.id, role: user.role, email: user.email }
   const tokens = signTokenPair(payload)
 
+  // Send welcome email async — don't block registration
+  import('../../modules/email/email.service').then(({ sendWelcomeEmail }) => {
+    sendWelcomeEmail({ firstName: user.first_name, email: user.email, referralCode: user.referral_code ?? undefined }).catch(() => {})
+  })
+
   return { user: sanitizeUser(user), tokens }
 }
 

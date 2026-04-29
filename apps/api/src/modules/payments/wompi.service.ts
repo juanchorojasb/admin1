@@ -146,6 +146,30 @@ export async function processWebhookEvent(event: {
           [reservationId]
         )
       }
+
+      // 5. Send payment confirmation email async
+      const { rows: [fullRes] } = await client.query(
+        `SELECT r.reservation_number, r.total_amount, r.deposit_amount, r.balance_amount,
+                r.payment_status, u.first_name, u.email, t.name as tour_name
+         FROM reservations r
+         JOIN users u ON u.id = r.user_id
+         JOIN tours t ON t.id = r.tour_id
+         WHERE r.id = $1`,
+        [reservationId]
+      )
+      if (fullRes) {
+        import('../../modules/email/email.service').then(({ sendPaymentConfirmEmail }) => {
+          sendPaymentConfirmEmail({
+            firstName: (fullRes as Record<string, string>).first_name,
+            email: (fullRes as Record<string, string>).email,
+            reservationNumber: (fullRes as Record<string, string>).reservation_number,
+            tourName: (fullRes as Record<string, string>).tour_name,
+            amountPaid: amountCOP,
+            paymentType: isDeposit ? 'deposito' : 'saldo_total',
+            balanceRemaining: isDeposit ? parseFloat((fullRes as Record<string, string>).balance_amount) : 0,
+          }).catch(() => {})
+        })
+      }
     } else if (['DECLINED', 'ERROR', 'VOIDED'].includes(status)) {
       // No cambiar estado de la reserva, solo registrar el fallo
       await client.query(

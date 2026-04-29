@@ -164,6 +164,36 @@ export async function upsertAliadoProfile(userId: string, dto: AliadoProfileDto)
   return profile
 }
 
+export async function getUserBadges(userId: string) {
+  const all = await query<{
+    id: string; name: string; description: string; icon: string;
+    condition_type: string; condition_value: number;
+    earned_at: string | null;
+  }>(
+    `SELECT b.id, b.name, b.description, b.icon, b.condition_type, b.condition_value,
+            ub.earned_at
+     FROM badges b
+     LEFT JOIN user_badges ub ON ub.badge_id = b.id AND ub.user_id = $1
+     ORDER BY b.name`,
+    [userId]
+  )
+  return all.map((b) => ({
+    id: b.id,
+    name: b.name,
+    description: b.description,
+    icon: b.icon,
+    earned: b.earned_at !== null,
+    earnedAt: b.earned_at ?? undefined,
+  }))
+}
+
+export async function getUserParks(userId: string) {
+  return query<{ park_name: string; visited_at: string; tour_id: string }>(
+    'SELECT park_name, visited_at, tour_id FROM user_parks_visited WHERE user_id = $1 ORDER BY visited_at DESC',
+    [userId]
+  )
+}
+
 export async function getStats() {
   const [total, byRole, newThisMonth] = await Promise.all([
     queryOne<{ count: string }>('SELECT COUNT(*) as count FROM users'),

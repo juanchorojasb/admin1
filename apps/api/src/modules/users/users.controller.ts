@@ -67,6 +67,24 @@ export async function upsertAliadoProfile(req: Request, res: Response) {
   }
 }
 
+export async function getBadges(req: Request, res: Response) {
+  try {
+    const badges = await usersService.getUserBadges(req.params.id)
+    return ok(res, badges)
+  } catch (err) {
+    return serverError(res, (err as Error).message)
+  }
+}
+
+export async function getParks(req: Request, res: Response) {
+  try {
+    const parks = await usersService.getUserParks(req.params.id)
+    return ok(res, parks)
+  } catch (err) {
+    return serverError(res, (err as Error).message)
+  }
+}
+
 export async function getStats(_req: Request, res: Response) {
   try {
     const stats = await usersService.getStats()

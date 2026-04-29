@@ -21,6 +21,10 @@ router.get('/:id', authorizeOwnerOrAdmin(), controller.getById)
 router.put('/:id', authorizeOwnerOrAdmin(), validate(updateUserSchema), controller.update)
 router.patch('/:id/status', authorize('admin'), controller.toggleStatus)
 
+// Badges y parques
+router.get('/:id/badges', authorizeOwnerOrAdmin(), controller.getBadges)
+router.get('/:id/parks', authorizeOwnerOrAdmin(), controller.getParks)
+
 // Perfiles especializados
 router.put('/:id/freelance-profile', authorize('admin', 'freelance'), validate(freelanceProfileSchema), controller.updateFreelanceProfile)
 router.put('/:id/aliado-profile', authorize('admin', 'aliado'), validate(aliadoProfileSchema), controller.upsertAliadoProfile)
