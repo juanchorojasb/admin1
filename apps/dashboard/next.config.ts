@@ -1,8 +1,10 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   images: {
     remotePatterns: [
+      { protocol: 'https', hostname: 'avesynaturaleza.uno' },
       { protocol: 'https', hostname: 'avesynaturaleza.travel' },
       { protocol: 'https', hostname: 'storage.googleapis.com' },
     ],
