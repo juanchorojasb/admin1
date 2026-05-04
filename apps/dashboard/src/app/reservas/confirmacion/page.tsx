@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
@@ -10,7 +11,7 @@ import { apiClient } from '@/lib/api/client'
 import { useQuery } from '@tanstack/react-query'
 import { RESERVAS_KEY } from '@/hooks/useReservas'
 
-export default function ConfirmacionPage() {
+function ConfirmacionContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const qc = useQueryClient()
@@ -41,52 +42,52 @@ export default function ConfirmacionPage() {
   const status = data?.status
 
   return (
+    <div className="max-w-md mx-auto text-center py-20 space-y-6">
+      {isLoading || !status ? (
+        <>
+          <PageLoader />
+          <p className="text-gray-500">Verificando tu pago...</p>
+        </>
+      ) : status === 'APPROVED' ? (
+        <>
+          <div className="w-20 h-20 bg-brand-green-50 rounded-full flex items-center justify-center mx-auto">
+            <CheckCircle className="w-10 h-10 text-brand-green" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">¡Pago exitoso!</h1>
+          <p className="text-gray-500">Tu reserva ha sido confirmada. Recibirás un correo con todos los detalles.</p>
+          <p className="text-xs text-gray-400 font-mono">Ref: {reference}</p>
+          <button onClick={() => router.push('/cliente/reservas')} className="btn-primary">
+            Ver mis reservas
+          </button>
+        </>
+      ) : ['DECLINED', 'ERROR', 'VOIDED'].includes(status ?? '') ? (
+        <>
+          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto">
+            <XCircle className="w-10 h-10 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Pago rechazado</h1>
+          <p className="text-gray-500">No pudimos procesar tu pago. Puedes intentarlo de nuevo.</p>
+          <button onClick={() => router.back()} className="btn-primary">Intentar de nuevo</button>
+        </>
+      ) : (
+        <>
+          <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto">
+            <Clock className="w-10 h-10 text-yellow-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Procesando...</h1>
+          <p className="text-gray-500">Tu pago está siendo verificado. Espera un momento.</p>
+        </>
+      )}
+    </div>
+  )
+}
+
+export default function ConfirmacionPage() {
+  return (
     <DashboardLayout>
-      <div className="max-w-md mx-auto text-center py-20 space-y-6">
-        {isLoading || !status ? (
-          <>
-            <PageLoader />
-            <p className="text-gray-500">Verificando tu pago...</p>
-          </>
-        ) : status === 'APPROVED' ? (
-          <>
-            <div className="w-20 h-20 bg-brand-green-50 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle className="w-10 h-10 text-brand-green" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">¡Pago exitoso!</h1>
-            <p className="text-gray-500">
-              Tu reserva ha sido confirmada. Recibirás un correo con todos los detalles.
-            </p>
-            <p className="text-xs text-gray-400 font-mono">Ref: {reference}</p>
-            <div className="flex gap-3 justify-center">
-              <button onClick={() => router.push('/cliente/reservas')} className="btn-primary">
-                Ver mis reservas
-              </button>
-            </div>
-          </>
-        ) : ['DECLINED', 'ERROR', 'VOIDED'].includes(status ?? '') ? (
-          <>
-            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto">
-              <XCircle className="w-10 h-10 text-red-500" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Pago rechazado</h1>
-            <p className="text-gray-500">
-              No pudimos procesar tu pago. Puedes intentarlo de nuevo.
-            </p>
-            <button onClick={() => router.back()} className="btn-primary">
-              Intentar de nuevo
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto">
-              <Clock className="w-10 h-10 text-yellow-500" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Procesando...</h1>
-            <p className="text-gray-500">Tu pago está siendo verificado. Espera un momento.</p>
-          </>
-        )}
-      </div>
+      <Suspense fallback={<PageLoader />}>
+        <ConfirmacionContent />
+      </Suspense>
     </DashboardLayout>
   )
 }
