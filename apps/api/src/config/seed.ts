@@ -186,7 +186,7 @@ async function seed() {
         [
           tour.slug, tour.name, tour.internalName, tour.tourType, tour.destination,
           tour.description, tour.basePrice, tour.priceChild ?? null,
-          tour.departureCities, tour.durationDays, tour.minPersons, tour.maxPersons,
+          JSON.stringify(tour.departureCities), tour.durationDays, tour.minPersons, tour.maxPersons,
           tour.difficulty, tour.isFeatured,
         ]
       )
