@@ -266,12 +266,13 @@ export async function cancelReservation(id: string, userId: string, role: string
 
 export async function getDashboardStats(userId: string, role: string) {
   if (role === 'admin') {
-    const [totals, monthly, topTours] = await Promise.all([
-      queryOne<{ total: string; confirmed: string; revenue: string; clients: string }>(
+    const [totals, monthly, topTours, byStatus] = await Promise.all([
+      queryOne<{ total: string; confirmed: string; revenue: string; month_revenue: string; clients: string }>(
         `SELECT
           COUNT(*) as total,
           COUNT(*) FILTER (WHERE status IN ('confirmada','pagada','completada')) as confirmed,
           COALESCE(SUM(total_amount) FILTER (WHERE payment_status IN ('parcial','completo')), 0) as revenue,
+          COALESCE(SUM(total_amount) FILTER (WHERE payment_status IN ('parcial','completo') AND date_trunc('month', created_at) = date_trunc('month', NOW())), 0) as month_revenue,
           COUNT(DISTINCT user_id) as clients
          FROM reservations`
       ),
@@ -290,8 +291,36 @@ export async function getDashboardStats(userId: string, role: string) {
          WHERE r.status != 'cancelada'
          GROUP BY t.id, t.name ORDER BY count DESC LIMIT 5`
       ),
+      query<{ status: string; count: string }>(
+        `SELECT status, COUNT(*) as count FROM reservations GROUP BY status`
+      ),
     ])
-    return { totals, monthly, topTours }
+
+    const total = Number(totals?.total ?? 0)
+    const confirmed = Number(totals?.confirmed ?? 0)
+
+    return {
+      totalReservations: total,
+      confirmedReservations: confirmed,
+      totalRevenue: Number(totals?.revenue ?? 0),
+      monthRevenue: Number(totals?.month_revenue ?? 0),
+      totalClients: Number(totals?.clients ?? 0),
+      newClientsMonth: 0,
+      conversionRate: total > 0 ? Math.round((confirmed / total) * 100) : 0,
+      topTours: topTours.map((t) => ({
+        tourName: t.tour_name,
+        count: Number(t.count),
+        revenue: Number(t.revenue),
+      })),
+      revenueByMonth: monthly.map((m) => ({
+        month: m.month,
+        revenue: Number(m.revenue),
+      })),
+      reservationsByStatus: byStatus.map((s) => ({
+        status: s.status,
+        count: Number(s.count),
+      })),
+    }
   }
 
   if (role === 'freelance') {

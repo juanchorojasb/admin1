@@ -6,9 +6,22 @@ import type { User } from '../../types'
 import type { LoginDto, RegisterDto, ChangePasswordDto } from './auth.schema'
 
 function sanitizeUser(user: User) {
-  const { password_hash, ...safe } = user
-  void password_hash
-  return safe
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    phone: user.phone,
+    documentId: user.document_id,
+    avatarUrl: user.avatar_url,
+    isActive: user.is_active,
+    emailVerified: user.email_verified,
+    referralCode: user.referral_code,
+    referredBy: user.referred_by,
+    createdAt: user.created_at,
+    updatedAt: user.updated_at,
+  }
 }
 
 export async function login(dto: LoginDto) {
