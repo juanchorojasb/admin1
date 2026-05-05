@@ -5,45 +5,53 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
-import toast from 'react-hot-toast'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 import { Eye, EyeOff, Leaf } from 'lucide-react'
-import { apiClient } from '@/lib/api/client'
-import { useAuthStore } from '@/lib/auth/store'
-import { getDashboardPath } from '@/lib/utils'
-import type { User, AuthTokens } from '@/types'
+import { authApi } from '@/lib/api/endpoints'
 
-const loginSchema = z.object({
+const registerSchema = z.object({
+  firstName: z.string().min(2, 'Nombre muy corto').max(100),
+  lastName: z.string().min(2, 'Apellido muy corto').max(100),
   email: z.string().email('Correo inválido'),
-  password: z.string().min(6, 'Mínimo 6 caracteres'),
+  password: z
+    .string()
+    .min(8, 'Mínimo 8 caracteres')
+    .regex(/[A-Z]/, 'Debe tener al menos una mayúscula')
+    .regex(/[0-9]/, 'Debe tener al menos un número'),
+  confirmPassword: z.string(),
+}).refine((d) => d.password === d.confirmPassword, {
+  message: 'Las contraseñas no coinciden',
+  path: ['confirmPassword'],
 })
 
-type LoginForm = z.infer<typeof loginSchema>
+type RegisterForm = z.infer<typeof registerSchema>
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter()
-  const setAuth = useAuthStore((s) => s.setAuth)
   const [showPass, setShowPass] = useState(false)
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) })
+  } = useForm<RegisterForm>({ resolver: zodResolver(registerSchema) })
 
-  const onSubmit = async (data: LoginForm) => {
+  const onSubmit = async (data: RegisterForm) => {
     try {
-      const res = await apiClient.post<{ data: { user: User; tokens: AuthTokens } }>(
-        '/auth/login',
-        data
-      )
-      setAuth(res.data.data.user, res.data.data.tokens)
-      toast.success(`Bienvenido, ${res.data.data.user.firstName}`)
-      router.push(getDashboardPath(res.data.data.user.role))
+      await authApi.register({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+      })
+      toast.success('Cuenta creada. Ya puedes iniciar sesión.')
+      router.push('/auth/login')
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Credenciales incorrectas'
-      toast.error(message)
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'No se pudo crear la cuenta'
+      toast.error(msg)
     }
   }
 
@@ -64,25 +72,12 @@ export default function LoginPage() {
         </div>
         <div className="relative space-y-6">
           <h1 className="text-4xl font-bold leading-tight">
-            Panel de gestión
-            <span className="block text-brand-green">ecológico</span>
+            Únete a nuestra
+            <span className="block text-brand-green">comunidad</span>
           </h1>
           <p className="text-blue-200 text-lg">
-            Administra tours, reservas y clientes desde un solo lugar.
+            Reserva tours de naturaleza, acumula insignias y explora los parques nacionales de Colombia.
           </p>
-          <div className="grid grid-cols-2 gap-4 pt-4">
-            {[
-              { label: 'Tours activos', value: '9+' },
-              { label: 'Parques naturales', value: '5' },
-              { label: 'Clientes felices', value: '500+' },
-              { label: 'Destinos', value: '8' },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-white/10 rounded-xl p-4">
-                <p className="text-2xl font-bold text-brand-green">{stat.value}</p>
-                <p className="text-sm text-blue-200">{stat.label}</p>
-              </div>
-            ))}
-          </div>
         </div>
         <p className="relative text-blue-300 text-sm">
           © 2024 Aves y Naturaleza · avesynaturaleza.travel
@@ -98,11 +93,40 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Iniciar sesión</h2>
-            <p className="mt-1 text-gray-500">Accede a tu panel personalizado</p>
+            <h2 className="text-2xl font-bold text-gray-900">Crear cuenta</h2>
+            <p className="mt-1 text-gray-500">Regístrate para reservar tours</p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Nombre</label>
+                <input
+                  {...register('firstName')}
+                  type="text"
+                  placeholder="Juan"
+                  className="input"
+                  autoComplete="given-name"
+                />
+                {errors.firstName && (
+                  <p className="mt-1 text-xs text-red-500">{errors.firstName.message}</p>
+                )}
+              </div>
+              <div>
+                <label className="label">Apellido</label>
+                <input
+                  {...register('lastName')}
+                  type="text"
+                  placeholder="Pérez"
+                  className="input"
+                  autoComplete="family-name"
+                />
+                {errors.lastName && (
+                  <p className="mt-1 text-xs text-red-500">{errors.lastName.message}</p>
+                )}
+              </div>
+            </div>
+
             <div>
               <label className="label">Correo electrónico</label>
               <input
@@ -123,9 +147,9 @@ export default function LoginPage() {
                 <input
                   {...register('password')}
                   type={showPass ? 'text' : 'password'}
-                  placeholder="••••••••"
+                  placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número"
                   className="input pr-10"
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -140,19 +164,33 @@ export default function LoginPage() {
               )}
             </div>
 
+            <div>
+              <label className="label">Confirmar contraseña</label>
+              <input
+                {...register('confirmPassword')}
+                type={showPass ? 'text' : 'password'}
+                placeholder="Repite tu contraseña"
+                className="input"
+                autoComplete="new-password"
+              />
+              {errors.confirmPassword && (
+                <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>
+              )}
+            </div>
+
             <button
               type="submit"
               disabled={isSubmitting}
               className="btn-primary w-full py-3 text-base"
             >
-              {isSubmitting ? 'Iniciando sesión...' : 'Entrar al panel'}
+              {isSubmitting ? 'Creando cuenta...' : 'Crear cuenta'}
             </button>
           </form>
 
           <div className="text-center text-sm text-gray-500">
-            ¿No tienes cuenta?{' '}
-            <Link href="/auth/register" className="text-brand-blue font-medium hover:underline">
-              Crear cuenta
+            ¿Ya tienes cuenta?{' '}
+            <Link href="/auth/login" className="text-brand-blue font-medium hover:underline">
+              Iniciar sesión
             </Link>
           </div>
 
