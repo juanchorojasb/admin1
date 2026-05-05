@@ -97,7 +97,7 @@ export function Sidebar() {
       <div className="px-4 py-3 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <div className={cn('w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold', ROLE_COLORS[user.role])}>
-            {user.firstName[0]}{user.lastName[0]}
+            {user.firstName?.[0]}{user.lastName?.[0]}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">

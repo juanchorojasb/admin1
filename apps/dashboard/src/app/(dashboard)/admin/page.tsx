@@ -165,7 +165,7 @@ export default function AdminDashboard() {
                       <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-brand-blue rounded-full"
-                          style={{ width: `${((tour.count / (typedStats?.topTours[0]?.count ?? 1)) * 100)}%` }}
+                          style={{ width: `${((tour.count / (typedStats?.topTours?.[0]?.count ?? 1)) * 100)}%` }}
                         />
                       </div>
                     </div>

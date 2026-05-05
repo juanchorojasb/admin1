@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'avn-auth',
-      version: 2,
+      version: 3,
       partialize: (state) => ({
         user: state.user,
         tokens: state.tokens,
