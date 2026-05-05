@@ -41,7 +41,7 @@ export async function update(req: Request, res: Response) {
 export async function toggleStatus(req: Request, res: Response) {
   try {
     const user = await usersService.toggleUserStatus(req.params.id)
-    return ok(res, user, `Usuario ${user.is_active ? 'activado' : 'desactivado'}`)
+    return ok(res, user, `Usuario ${user.isActive ? 'activado' : 'desactivado'}`)
   } catch (err) {
     return notFound(res, (err as Error).message)
   }

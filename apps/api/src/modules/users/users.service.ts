@@ -10,9 +10,22 @@ import type {
 import type { Request } from 'express'
 
 function sanitize(user: User) {
-  const { password_hash, ...safe } = user
-  void password_hash
-  return safe
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    phone: user.phone ?? null,
+    documentId: user.document_id ?? null,
+    avatarUrl: user.avatar_url ?? null,
+    isActive: user.is_active,
+    emailVerified: user.email_verified,
+    referralCode: user.referral_code ?? null,
+    referredBy: user.referred_by ?? null,
+    createdAt: user.created_at,
+    updatedAt: user.updated_at,
+  }
 }
 
 export async function listUsers(req: Request) {

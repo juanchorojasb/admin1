@@ -24,7 +24,7 @@ export default function AdminClientesPage() {
       render: (u: User) => (
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-brand-blue-100 flex items-center justify-center text-brand-blue font-bold text-sm shrink-0">
-            {u.firstName[0]}{u.lastName[0]}
+            {u.firstName?.[0]}{u.lastName?.[0]}
           </div>
           <div>
             <p className="font-medium text-sm">{u.firstName} {u.lastName}</p>

@@ -11,7 +11,10 @@ export function useUsers(params?: Record<string, string | number>) {
     queryKey: [USERS_KEY, params],
     queryFn: async () => {
       const res = await usersApi.list(params)
-      return res.data
+      // API returns { success, data: [], pagination: { total, page, limit, totalPages } }
+      // Normalize to match PaginatedResponse<User> shape expected by components
+      const body = res.data as unknown as { data: unknown[]; pagination: { total: number; page: number; limit: number; totalPages: number } }
+      return { data: body.data, ...body.pagination }
     },
   })
 }
