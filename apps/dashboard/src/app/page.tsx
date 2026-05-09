@@ -112,7 +112,7 @@ export default function LandingPage() {
             ) : (
               <>
                 <Link href="/auth/login" className="text-sm font-medium text-gray-600 hover:text-brand-blue">Ingresar</Link>
-                <Link href="/auth/login" className="btn-primary text-sm">Reservar</Link>
+                <Link href="/reservas/nueva" className="btn-primary text-sm">Reservar</Link>
               </>
             )}
           </div>
@@ -202,7 +202,7 @@ export default function LandingPage() {
                       <p className="text-xs text-gray-400">Desde</p>
                       <p className="text-xl font-bold text-gray-900">{formatCOP(tourPrice(t))}</p>
                     </div>
-                    <Link href="/auth/login" className="bg-brand-green text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-green-600 transition-colors flex items-center gap-1">
+                    <Link href={`/reservas/nueva?tourId=${t.id}`} className="bg-brand-green text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-green-600 transition-colors flex items-center gap-1">
                       Reservar <ChevronRight className="w-4 h-4" />
                     </Link>
                   </div>

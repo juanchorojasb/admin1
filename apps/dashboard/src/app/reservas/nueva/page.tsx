@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { PublicLayout } from '@/components/layout/PublicLayout'
 import { WompiButton } from '@/components/ui/WompiButton'
 import { PageLoader } from '@/components/ui/LoadingSpinner'
 import { useTour } from '@/hooks/useTours'
@@ -14,7 +14,7 @@ import { useCreateReservation } from '@/hooks/useReservas'
 import { useWompiPayment } from '@/hooks/useWompi'
 import { useAuthStore } from '@/lib/auth/store'
 import { formatCOP, formatDate } from '@/lib/utils'
-import { CalendarDays, Users, MapPin, ChevronRight, AlertCircle, CheckCircle } from 'lucide-react'
+import { CalendarDays, Users, MapPin, ChevronRight, AlertCircle } from 'lucide-react'
 import type { TourAvailability } from '@/types'
 
 const schema = z.object({
@@ -30,7 +30,6 @@ const schema = z.object({
 })
 
 type FormData = z.infer<typeof schema>
-type Step = 'form' | 'payment' | 'success'
 
 function NuevaReservaContent() {
   const searchParams = useSearchParams()
@@ -43,11 +42,12 @@ function NuevaReservaContent() {
   const createReservation = useCreateReservation()
   const wompiPayment = useWompiPayment()
 
-  const [step, setStep] = useState<Step>('form')
+  const [step, setStep] = useState<'form' | 'payment'>('form')
   const [createdReservation, setCreatedReservation] = useState<{
     id: string; reservationNumber: string; totalAmount: number; depositAmount: number
   } | null>(null)
   const [wompiConfig, setWompiConfig] = useState<object | null>(null)
+  const [paymentReference, setPaymentReference] = useState('')
   const [selectedAvail] = useState<TourAvailability | null>(null)
 
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
@@ -81,6 +81,7 @@ function NuevaReservaContent() {
       const reservation = res.data.data as typeof createdReservation
       setCreatedReservation(reservation)
       const reference = `${reservation!.reservationNumber}-${data.paymentType === 'full' ? 'FULL' : 'DEP'}`
+      setPaymentReference(reference)
       const wompiRes = await wompiPayment.mutateAsync({
         reservationId: reservation!.id, amount: payAmount,
         email: data.contactEmail, fullName: data.contactName,
@@ -92,31 +93,22 @@ function NuevaReservaContent() {
   }
 
   if (tourLoading) return <PageLoader />
-  if (!tour) return <p className="text-center py-20 text-gray-400">Tour no encontrado</p>
-
-  if (step === 'success') {
-    return (
-      <div className="max-w-lg mx-auto text-center py-20">
-        <div className="w-20 h-20 bg-brand-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle className="w-10 h-10 text-brand-green" />
-        </div>
-        <h1 className="text-2xl font-bold text-gray-900">¡Reserva confirmada!</h1>
-        <p className="text-gray-500 mt-2">Tu reserva <strong>{createdReservation?.reservationNumber}</strong> ha sido procesada.</p>
-        <div className="mt-6 flex gap-3 justify-center">
-          <button onClick={() => router.push('/cliente/reservas')} className="btn-primary">Ver mis reservas</button>
-          <button onClick={() => router.push('/')} className="btn-ghost">Inicio</button>
-        </div>
-      </div>
-    )
-  }
+  if (!tour) return (
+    <div className="flex items-center justify-center py-32">
+      <p className="text-gray-400">Tour no encontrado</p>
+    </div>
+  )
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
       <div className="flex items-center gap-2 text-sm text-gray-400">
-        <span>Tours</span><ChevronRight className="w-4 h-4" />
-        <span className="text-gray-900 font-medium">{tour.name}</span><ChevronRight className="w-4 h-4" />
+        <a href="/#tours" className="hover:text-brand-blue transition-colors">Tours</a>
+        <ChevronRight className="w-4 h-4" />
+        <span className="text-gray-900 font-medium">{tour.name}</span>
+        <ChevronRight className="w-4 h-4" />
         <span className="text-brand-blue">Reservar</span>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <div className="md:col-span-3 space-y-4">
           <div className="card">
@@ -168,6 +160,7 @@ function NuevaReservaContent() {
               </div>
             </form>
           </div>
+
           <div className="card">
             <h2 className="font-semibold text-gray-900 mb-3">¿Cómo quieres pagar?</h2>
             <div className="grid grid-cols-2 gap-3">
@@ -189,13 +182,17 @@ function NuevaReservaContent() {
             </div>
           </div>
         </div>
+
         <div className="md:col-span-2">
-          <div className="card sticky top-6">
+          <div className="card sticky top-24">
             <h2 className="font-semibold text-gray-900 mb-3">Resumen</h2>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2 pb-3 border-b border-gray-100">
                 <MapPin className="w-4 h-4 text-brand-blue mt-0.5 shrink-0" />
-                <div><p className="font-medium">{tour.name}</p><p className="text-gray-400 text-xs">{tour.destination}</p></div>
+                <div>
+                  <p className="font-medium">{tour.name}</p>
+                  <p className="text-gray-400 text-xs">{tour.destination}</p>
+                </div>
               </div>
               {selectedAvail && (
                 <div className="flex items-center gap-2 text-gray-500">
@@ -203,15 +200,30 @@ function NuevaReservaContent() {
                 </div>
               )}
               <div className="flex items-center gap-2 text-gray-500">
-                <Users className="w-4 h-4" />{numAdults} adulto{numAdults > 1 ? 's' : ''}{numChildren > 0 && ` · ${numChildren} niño${numChildren > 1 ? 's' : ''}`}
+                <Users className="w-4 h-4" />
+                {numAdults} adulto{numAdults > 1 ? 's' : ''}
+                {numChildren > 0 && ` · ${numChildren} niño${numChildren > 1 ? 's' : ''}`}
               </div>
               <div className="pt-3 border-t border-gray-100 space-y-1.5">
-                <div className="flex justify-between text-gray-500"><span>{numAdults} × adulto</span><span>{formatCOP(numAdults * unitPrice)}</span></div>
-                {numChildren > 0 && <div className="flex justify-between text-gray-500"><span>{numChildren} × niño</span><span>{formatCOP(numChildren * childPrice)}</span></div>}
-                <div className="flex justify-between font-bold text-gray-900 pt-1 border-t border-gray-100"><span>Total</span><span>{formatCOP(total)}</span></div>
-                {paymentType === 'deposit' && <div className="flex justify-between text-brand-blue font-semibold"><span>Pagas ahora (30%)</span><span>{formatCOP(deposit)}</span></div>}
+                <div className="flex justify-between text-gray-500">
+                  <span>{numAdults} × adulto</span><span>{formatCOP(numAdults * unitPrice)}</span>
+                </div>
+                {numChildren > 0 && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>{numChildren} × niño</span><span>{formatCOP(numChildren * childPrice)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-gray-900 pt-1 border-t border-gray-100">
+                  <span>Total</span><span>{formatCOP(total)}</span>
+                </div>
+                {paymentType === 'deposit' && (
+                  <div className="flex justify-between text-brand-blue font-semibold">
+                    <span>Pagas ahora (30%)</span><span>{formatCOP(deposit)}</span>
+                  </div>
+                )}
               </div>
             </div>
+
             {step === 'form' ? (
               <button type="submit" form="reservation-form" disabled={isSubmitting} className="btn-primary w-full mt-4 py-3">
                 {isSubmitting ? 'Creando reserva...' : 'Continuar al pago'}
@@ -223,7 +235,7 @@ function NuevaReservaContent() {
                   <WompiButton
                     config={wompiConfig as Parameters<typeof WompiButton>[0]['config']}
                     label={`Pagar ${formatCOP(payAmount)}`}
-                    onSuccess={() => setStep('success')}
+                    onSuccess={() => router.push(`/reservas/confirmacion?ref=${paymentReference}`)}
                     onError={() => toast.error('Pago rechazado. Intenta de nuevo.')}
                   />
                 </div>
@@ -239,10 +251,10 @@ function NuevaReservaContent() {
 
 export default function NuevaReservaPage() {
   return (
-    <DashboardLayout>
+    <PublicLayout>
       <Suspense fallback={<PageLoader />}>
         <NuevaReservaContent />
       </Suspense>
-    </DashboardLayout>
+    </PublicLayout>
   )
 }

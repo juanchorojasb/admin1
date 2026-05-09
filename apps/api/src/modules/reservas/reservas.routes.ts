@@ -8,22 +8,15 @@ import * as controller from './reservas.controller'
 
 const router = Router()
 
-router.use(authenticate)
-
-router.get('/', controller.list)
-router.get('/stats', controller.stats)
-router.get('/:id', controller.getOne)
-
-// Cualquier usuario autenticado puede crear una reserva
+// Crear reserva es público — req.user es opcional (guest checkout)
 router.post('/', validate(createReservationSchema), controller.create)
 
-// Admin puede actualizar estado
-router.put('/:id', authorize('admin'), validate(updateReservationSchema), controller.update)
-
-// Admin registra pagos
-router.post('/:id/payments', authorize('admin'), validate(registerPaymentSchema), controller.registerPayment)
-
-// Cliente o admin puede cancelar
-router.post('/:id/cancel', authorize('admin', 'cliente'), controller.cancel)
+// Rutas autenticadas
+router.get('/', authenticate, controller.list)
+router.get('/stats', authenticate, controller.stats)
+router.get('/:id', authenticate, controller.getOne)
+router.put('/:id', authenticate, authorize('admin'), validate(updateReservationSchema), controller.update)
+router.post('/:id/payments', authenticate, authorize('admin'), validate(registerPaymentSchema), controller.registerPayment)
+router.post('/:id/cancel', authenticate, authorize('admin', 'cliente'), controller.cancel)
 
 export default router

@@ -1,26 +1,28 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { PublicLayout } from '@/components/layout/PublicLayout'
 import { PageLoader } from '@/components/ui/LoadingSpinner'
 import { useQueryClient } from '@tanstack/react-query'
-import { CheckCircle, XCircle, Clock } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, UserPlus } from 'lucide-react'
 import { apiClient } from '@/lib/api/client'
 import { useQuery } from '@tanstack/react-query'
+import { useAuthStore } from '@/lib/auth/store'
 import { RESERVAS_KEY } from '@/hooks/useReservas'
+import Link from 'next/link'
 
 function ConfirmacionContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const qc = useQueryClient()
+  const { isAuthenticated } = useAuthStore()
   const reference = searchParams.get('ref') ?? ''
 
   const { data, isLoading } = useQuery({
     queryKey: ['wompi-ref', reference],
     queryFn: async () => {
-      const res = await apiClient.get<{ data: { status: string; amount: number } }>(
+      const res = await apiClient.get<{ data: { status: string; amount: number; reservationNumber?: string } }>(
         `/payments/wompi/reference/${reference}`
       )
       return res.data.data
@@ -40,9 +42,10 @@ function ConfirmacionContent() {
   }, [data?.status, qc])
 
   const status = data?.status
+  const amountPaid = data?.amount ? data.amount / 100 : 0
 
   return (
-    <div className="max-w-md mx-auto text-center py-20 space-y-6">
+    <div className="max-w-md mx-auto px-4 text-center py-20 space-y-6">
       {isLoading || !status ? (
         <>
           <PageLoader />
@@ -53,12 +56,56 @@ function ConfirmacionContent() {
           <div className="w-20 h-20 bg-brand-green-50 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle className="w-10 h-10 text-brand-green" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">¡Pago exitoso!</h1>
-          <p className="text-gray-500">Tu reserva ha sido confirmada. Recibirás un correo con todos los detalles.</p>
-          <p className="text-xs text-gray-400 font-mono">Ref: {reference}</p>
-          <button onClick={() => router.push('/cliente/reservas')} className="btn-primary">
-            Ver mis reservas
-          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">¡Pago exitoso!</h1>
+            <p className="text-gray-500 mt-2">
+              Tu reserva ha sido confirmada. Recibirás un correo con todos los detalles.
+            </p>
+          </div>
+
+          <div className="bg-gray-50 rounded-2xl p-5 text-left space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Referencia</span>
+              <span className="font-mono font-medium text-gray-900">{reference}</span>
+            </div>
+            {amountPaid > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Monto pagado</span>
+                <span className="font-semibold text-brand-green">
+                  {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(amountPaid)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {isAuthenticated ? (
+            <button onClick={() => router.push('/cliente/reservas')} className="btn-primary w-full">
+              Ver mis reservas
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="bg-brand-blue-50 border border-brand-blue/20 rounded-2xl p-5 text-left">
+                <div className="flex items-start gap-3">
+                  <UserPlus className="w-5 h-5 text-brand-blue mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">Crea una cuenta gratis</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Accede al historial de tus reservas, recibe notificaciones y acumula puntos de fidelidad.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href={`/auth/register?ref=${reference}`}
+                  className="btn-primary w-full mt-4 block text-center"
+                >
+                  Crear cuenta
+                </Link>
+              </div>
+              <button onClick={() => router.push('/')} className="btn-ghost w-full">
+                Volver al inicio
+              </button>
+            </div>
+          )}
         </>
       ) : ['DECLINED', 'ERROR', 'VOIDED'].includes(status ?? '') ? (
         <>
@@ -84,10 +131,10 @@ function ConfirmacionContent() {
 
 export default function ConfirmacionPage() {
   return (
-    <DashboardLayout>
+    <PublicLayout>
       <Suspense fallback={<PageLoader />}>
         <ConfirmacionContent />
       </Suspense>
-    </DashboardLayout>
+    </PublicLayout>
   )
 }
