@@ -8,7 +8,7 @@ interface WompiConfig {
   currency: 'COP'
   amountInCents: number
   reference: string
-  signature: string
+  signature: { integrity: string }
   customerData: {
     email: string
     fullName: string

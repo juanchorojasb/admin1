@@ -45,7 +45,7 @@ export async function buildCheckoutData(input: WompiTransactionInput) {
     currency: 'COP',
     amountInCents: amountCents,
     reference: input.reference,
-    signature,
+    signature: { integrity: signature },
     customerData: {
       email: input.email,
       fullName: input.fullName,

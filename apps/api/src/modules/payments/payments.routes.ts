@@ -20,20 +20,14 @@ const createSchema = z.object({
   amount: z.number().min(1000),
 })
 
-router.post('/wompi/create', authenticate, validate(createSchema), async (req: Request, res: Response) => {
+router.post('/wompi/create', validate(createSchema), async (req: Request, res: Response) => {
   try {
     const { reservationId, amount, email, fullName, phone, reference } = req.body
 
-    // Verificar que la reserva existe y pertenece al usuario (o es admin)
     const reservation = await queryOne<Reservation>(
-      'SELECT * FROM reservations WHERE id = $1', [reservationId]
+      'SELECT id FROM reservations WHERE id = $1', [reservationId]
     )
     if (!reservation) return badRequest(res, 'Reserva no encontrada')
-
-    const r = reservation as unknown as { user_id: string; total_amount: number }
-    if (req.user!.role !== 'admin' && r.user_id !== req.user!.userId) {
-      return badRequest(res, 'Acceso denegado')
-    }
 
     const checkoutData = await wompiService.buildCheckoutData({
       reservationId,
@@ -61,7 +55,7 @@ router.get('/wompi/transaction/:id', authenticate, async (req: Request, res: Res
   }
 })
 
-router.get('/wompi/reference/:reference', authenticate, async (req: Request, res: Response) => {
+router.get('/wompi/reference/:reference', async (req: Request, res: Response) => {
   try {
     const tx = await wompiService.getTransactionByReference(req.params.reference)
     if (!tx) return badRequest(res, 'Transacción no encontrada')
