@@ -41,7 +41,7 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_change_in_prod}
       PORT: 4000
       APP_URL: ${APP_URL:-http://localhost:3000}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      ALLOWED_ORIGINS: http://localhost:3000,${ALLOWED_ORIGINS:-https://avesynaturaleza.uno}
       WOMPI_PUBLIC_KEY: ${WOMPI_PUBLIC_KEY:-pub_test_placeholder}
       WOMPI_PRIVATE_KEY: ${WOMPI_PRIVATE_KEY:-prv_test_placeholder}
       WOMPI_INTEGRITY_SECRET: ${WOMPI_INTEGRITY_SECRET:-test_integrity_placeholder}
