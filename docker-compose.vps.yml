@@ -70,14 +70,17 @@ services:
       context: ./apps/dashboard
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: https://${DOMAIN}
+        NEXT_PUBLIC_API_URL: ${APP_URL:-https://avesynaturaleza.uno}
+        NEXT_PUBLIC_APP_NAME: Aves y Naturaleza
         NEXT_PUBLIC_WOMPI_PUBLIC_KEY: ${NEXT_PUBLIC_WOMPI_PUBLIC_KEY}
     container_name: avn_dashboard
     restart: always
     ports:
       - "127.0.0.1:3000:3000"
     environment:
+      NEXT_PUBLIC_API_URL: ${APP_URL:-https://avesynaturaleza.uno}
       NEXT_PUBLIC_APP_NAME: Aves y Naturaleza
+      NEXT_PUBLIC_WOMPI_PUBLIC_KEY: ${NEXT_PUBLIC_WOMPI_PUBLIC_KEY}
     depends_on:
       - api
 
