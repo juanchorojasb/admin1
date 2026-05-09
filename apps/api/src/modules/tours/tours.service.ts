@@ -42,7 +42,7 @@ export async function getTourById(idOrSlug: string) {
     `SELECT t.*, ti.*
      FROM tours t
      LEFT JOIN tour_includes ti ON ti.tour_id = t.id
-     WHERE t.id = $1 OR t.slug = $1`,
+     WHERE t.id::text = $1 OR t.slug = $1`,
     [idOrSlug]
   )
   if (!tour) throw new Error('Tour no encontrado')
