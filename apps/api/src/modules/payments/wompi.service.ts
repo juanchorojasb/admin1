@@ -2,14 +2,16 @@ import crypto from 'crypto'
 import axios from 'axios'
 import { query, queryOne, withTransaction } from '../../config/db'
 
-const WOMPI_BASE = process.env.NODE_ENV === 'production'
-  ? 'https://production.wompi.co/v1'
-  : 'https://sandbox.wompi.co/v1'
-
-const PRIVATE_KEY = process.env.WOMPI_PRIVATE_KEY!
 const PUBLIC_KEY = process.env.WOMPI_PUBLIC_KEY!
+const PRIVATE_KEY = process.env.WOMPI_PRIVATE_KEY!
 const INTEGRITY_SECRET = process.env.WOMPI_INTEGRITY_SECRET!
 const EVENTS_SECRET = process.env.WOMPI_EVENTS_SECRET!
+
+// Detectar entorno Wompi por prefijo de llave, no por NODE_ENV
+// pub_prod_* → producción, cualquier otra → sandbox
+const WOMPI_BASE = PUBLIC_KEY?.startsWith('pub_prod_')
+  ? 'https://production.wompi.co/v1'
+  : 'https://sandbox.wompi.co/v1'
 
 // Wompi trabaja en centavos
 const toCents = (cop: number) => Math.round(cop * 100)
