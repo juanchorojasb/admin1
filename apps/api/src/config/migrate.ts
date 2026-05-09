@@ -263,6 +263,93 @@ async function migrate() {
   `)
   await query(`CREATE INDEX IF NOT EXISTS idx_parks_user ON user_parks_visited(user_id);`)
 
+  // ─── Site config ──────────────────────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS site_config (
+      id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      key         VARCHAR(100) UNIQUE NOT NULL,
+      value       JSONB NOT NULL,
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `)
+
+  const defaultConfigs: { key: string; value: unknown }[] = [
+    {
+      key: 'hero',
+      value: {
+        badge: 'Ecoturismo en PNN Los Nevados · Colombia',
+        title1: 'Descubre la naturaleza',
+        title2: 'más salvaje de Colombia',
+        subtitle: 'Volcanes nevados, selvas vírgenes, valles de palmas de cera y ballenas en el Pacífico. Experiencias ecoturísticas únicas con guías expertos.',
+        btn1: 'Ver tours',
+        btn2: 'Contáctanos',
+        stats: [
+          { icon: '🌿', label: '+9 destinos ecológicos' },
+          { icon: '🦅', label: '+350 especies de aves' },
+          { icon: '⭐', label: 'Guías certificados' },
+        ],
+      },
+    },
+    {
+      key: 'parques',
+      value: [
+        { icon: '🏔️', name: 'PNN Los Nevados', desc: 'Volcanes y páramo', color: 'from-blue-500 to-blue-700' },
+        { icon: '🌿', name: 'Selva de Florencia', desc: 'Bosque Andes-Amazonía', color: 'from-green-500 to-green-700' },
+        { icon: '🌴', name: 'Valle del Cocora', desc: 'Palmas de cera', color: 'from-teal-500 to-teal-700' },
+        { icon: '🐋', name: 'Bahía Solano', desc: 'Ballenas del Pacífico', color: 'from-cyan-500 to-cyan-700' },
+      ],
+    },
+    {
+      key: 'nosotros',
+      value: {
+        label: 'QUIÉNES SOMOS',
+        title: 'Ecoturismo responsable en Colombia',
+        text1: 'Somos una agencia especializada en experiencias ecoturísticas en el Eje Cafetero y PNN Los Nevados. Nuestro enfoque combina aventura, educación ambiental y responsabilidad con las comunidades locales.',
+        text2: 'Trabajamos con guías certificados, aliados locales verificados y nos comprometemos con la conservación de los ecosistemas que visitamos.',
+        stats: [
+          { value: '9+', label: 'Destinos' },
+          { value: '500+', label: 'Viajeros' },
+          { value: '5★', label: 'Calificación' },
+        ],
+        features: [
+          { icon: '🦅', title: 'Avistamiento de aves', desc: 'Más de 350 especies registradas' },
+          { icon: '🌿', title: 'Conservación', desc: 'Turismo de bajo impacto' },
+          { icon: '🏔️', title: 'Alta montaña', desc: 'Guías certificados en altitud' },
+          { icon: '👥', title: 'Comunidades', desc: 'Apoyo a familias locales' },
+        ],
+      },
+    },
+    {
+      key: 'cta',
+      value: {
+        title: '¿Listo para la aventura?',
+        subtitle: 'Reserva en línea con pago seguro. Depósito del 30% para confirmar tu cupo.',
+        whatsapp: '573000000000',
+      },
+    },
+    {
+      key: 'contacto',
+      value: {
+        phone: '+57 300 000 0000',
+        phoneHref: '573000000000',
+        email: 'info@avesynaturaleza.travel',
+        instagram: '@avesynaturaleza',
+        whatsapp: '573000000000',
+      },
+    },
+    {
+      key: 'footer',
+      value: { copyright: '© 2024 Aves y Naturaleza · Ecoturismo responsable en Colombia' },
+    },
+  ]
+
+  for (const c of defaultConfigs) {
+    await query(
+      `INSERT INTO site_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`,
+      [c.key, JSON.stringify(c.value)]
+    )
+  }
+
   console.log('✅ Migraciones completadas exitosamente!')
   process.exit(0)
 }

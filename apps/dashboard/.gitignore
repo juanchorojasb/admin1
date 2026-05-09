@@ -1,0 +1,5 @@
+.next/
+node_modules/
+.env*
+public/hero-1.mov
+public/*.mov

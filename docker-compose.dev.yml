@@ -46,6 +46,7 @@ services:
       WOMPI_PRIVATE_KEY: ${WOMPI_PRIVATE_KEY:-prv_test_placeholder}
       WOMPI_INTEGRITY_SECRET: ${WOMPI_INTEGRITY_SECRET:-test_integrity_placeholder}
       WOMPI_EVENTS_SECRET: ${WOMPI_EVENTS_SECRET:-test_events_placeholder}
+      GROQ_API_KEY: ${GROQ_API_KEY}
     volumes:
       - ./apps/api:/app
       - /app/node_modules

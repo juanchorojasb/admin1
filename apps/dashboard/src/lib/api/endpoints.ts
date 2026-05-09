@@ -152,6 +152,19 @@ export const aliadosApi = {
     apiClient.patch<ApiResponse<object>>(`/aliados/${id}/verify`),
 }
 
+// ─── Site config ─────────────────────────────────────────────────────────────
+
+export const configApi = {
+  getSite: () =>
+    apiClient.get<ApiResponse<Record<string, unknown>>>('/config/site'),
+
+  updateKey: (key: string, value: unknown) =>
+    apiClient.put<ApiResponse<unknown>>('/config/site', { key, value }),
+
+  upload: (file: string, filename: string) =>
+    apiClient.post<ApiResponse<{ url: string }>>('/config/upload', { file, filename }),
+}
+
 // ─── Wompi ───────────────────────────────────────────────────────────────────
 
 export const wompiApi = {

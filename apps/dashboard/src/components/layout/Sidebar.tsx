@@ -9,7 +9,7 @@ import {
   LayoutDashboard, CalendarDays, Users, Map, Settings,
   LogOut, Leaf, TrendingUp, Package, Truck, ShoppingBag,
   Award, DollarSign, Share2, BookOpen, UserCheck,
-  Building2, Star, Bell,
+  Building2, Star, Bell, FileEdit,
 } from 'lucide-react'
 import type { UserRole } from '@/types'
 
@@ -32,6 +32,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: 'Blog', href: '/admin/blog', icon: <BookOpen className="w-4 h-4" /> },
     { label: 'Souvenirs', href: '/admin/souvenirs', icon: <ShoppingBag className="w-4 h-4" /> },
     { label: 'Reportes', href: '/admin/reportes', icon: <TrendingUp className="w-4 h-4" /> },
+    { label: 'Contenido', href: '/admin/contenido', icon: <FileEdit className="w-4 h-4" /> },
     { label: 'Configuración', href: '/admin/configuracion', icon: <Settings className="w-4 h-4" /> },
   ],
   cliente: [

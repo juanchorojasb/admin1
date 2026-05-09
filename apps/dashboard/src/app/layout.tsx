@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Providers } from './providers'
+import { ChatWidget } from '@/components/chat/ChatWidget'
 
 export const metadata: Metadata = {
   title: 'Aves y Naturaleza | Panel',
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body className="font-sans">
         <Providers>{children}</Providers>
+        <ChatWidget />
       </body>
     </html>
   )
