@@ -1,5 +1,3 @@
-version: '3.9'
-
 # Producción sin Nginx en Docker — el Nginx del sistema actúa como proxy
 # API expuesta en localhost:4000, Dashboard en localhost:3000
 
@@ -36,6 +34,9 @@ services:
     restart: always
     ports:
       - "127.0.0.1:4000:4000"
+    volumes:
+      # Imágenes subidas desde el admin: persisten entre rebuilds
+      - uploads_data:/app/uploads
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://avn_user:${DB_PASSWORD}@postgres:5432/aves_naturaleza
@@ -84,3 +85,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:
