@@ -23,6 +23,9 @@ import { pool } from './config/db'
 const app = express()
 const PORT = parseInt(process.env.PORT ?? '4000')
 
+// Cloudflare → Nginx → contenedor: confiar en 2 saltos para que el rate limit vea la IP real del cliente
+app.set('trust proxy', 2)
+
 // Seguridad y utilidades
 app.use(helmet())
 app.use(cors({
