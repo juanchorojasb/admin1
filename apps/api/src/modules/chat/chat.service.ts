@@ -7,7 +7,9 @@ function getGroq(): Groq {
   return _groq
 }
 
-const MODEL = 'llama-3.3-70b-versatile'
+// Groq retira modelos con frecuencia (llama-3.3-70b-versatile se apagó el 16/08/2026):
+// el modelo se cambia en el .env con GROQ_MODEL. Ver https://console.groq.com/docs/deprecations
+const MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b'
 const SESSION_TTL = 60 * 60 * 2 // 2 horas
 const MAX_HISTORY = 20 // máximo 10 turnos (user + assistant)
 
@@ -133,10 +135,12 @@ export async function sendMessage(sessionId: string, userMessage: string): Promi
       ...history,
     ],
     temperature: 0.7,
-    max_tokens: 600,
+    max_completion_tokens: 1024,
+    // Razonamiento corto y fuera de la respuesta en los modelos gpt-oss
+    ...(MODEL.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low' as const, include_reasoning: false } : {}),
   })
 
-  const assistantMessage = completion.choices[0]?.message?.content ?? 'Lo siento, no pude procesar tu mensaje. Intenta de nuevo.'
+  const assistantMessage = completion.choices[0]?.message?.content || 'Lo siento, no pude procesar tu mensaje. Intenta de nuevo.'
 
   history.push({ role: 'assistant', content: assistantMessage })
 
