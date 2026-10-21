@@ -1,5 +1,13 @@
 import Groq from 'groq-sdk'
 import { redis } from '../../config/redis'
+import { query, queryOne } from '../../config/db'
+import {
+  aTextoPlano,
+  formatearContacto,
+  formatearExperiencia,
+  type ContactoConfig,
+  type ExperienciaFila,
+} from './chat.texto'
 
 let _groq: Groq | null = null
 function getGroq(): Groq {
@@ -10,78 +18,51 @@ function getGroq(): Groq {
 // Groq retira modelos con frecuencia (llama-3.3-70b-versatile se apagó el 16/08/2026):
 // el modelo se cambia en el .env con GROQ_MODEL. Ver https://console.groq.com/docs/deprecations
 const MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b'
+// En los modelos gpt-oss el límite incluye los tokens de razonamiento
+const MAX_TOKENS = 1024
 const SESSION_TTL = 60 * 60 * 2 // 2 horas
 const MAX_HISTORY = 20 // máximo 10 turnos (user + assistant)
 
-const SYSTEM_PROMPT = `Eres Natura, la asistente virtual de Aves y Naturaleza, una agencia de turismo ecológico colombiana especializada en ecoturismo, avistamiento de aves y naturaleza. Eres amable, entusiasta y apasionada por la naturaleza colombiana.
+// Los tours se leen de la base de datos en cada mensaje: los precios y textos que el admin
+// cambie en /admin/tours quedan disponibles para Natura sin tocar código.
+async function catalogoTexto(): Promise<string> {
+  try {
+    const filas = await query<ExperienciaFila>(
+      `SELECT name, tour_type, destination, description, base_price, price_child,
+              min_persons, max_persons, difficulty, departure_cities, includes, excludes
+         FROM tours
+        WHERE is_active = true
+        ORDER BY is_featured DESC, name
+        LIMIT 30`
+    )
+    if (filas.length === 0) return 'Por ahora no hay tours publicados en la plataforma.'
+    return filas.map((t, i) => formatearExperiencia(t, i + 1)).join('\n\n')
+  } catch (err) {
+    console.error('[Natura] No se pudo leer el catálogo:', err)
+    return 'El catálogo no está disponible en este momento.'
+  }
+}
 
-## TUS TOURS (9 experiencias disponibles)
+async function contactoTexto(): Promise<string> {
+  const respaldo = 'Canales de contacto en avesynaturaleza.uno'
+  try {
+    const fila = await queryOne<{ value: ContactoConfig }>(`SELECT value FROM site_config WHERE key = 'contacto'`)
+    return formatearContacto(fila?.value ?? {}) ?? respaldo
+  } catch (err) {
+    console.error('[Natura] No se pudo leer el contacto:', err)
+    return respaldo
+  }
+}
 
-### 1. Nevado del Ruiz desde Manizales (NRM-01)
-- Tipo: Pasadía | Dificultad: Difícil
-- Precio: $185.000 adulto / $120.000 niño
-- Salida: Manizales | Personas: 4–15
-- Incluye: Transporte, guía especializado, refrigerio de montaña, seguro básico
-- Descripción: Ascenso al volcán más activo de Colombia. Cráter del Arenas, patos de páramo, frailejones gigantes.
+async function systemPrompt(): Promise<string> {
+  const [catalogo, contacto] = await Promise.all([catalogoTexto(), contactoTexto()])
 
-### 2. Nevado del Ruiz desde Pereira (NRP-01)
-- Tipo: Pasadía | Dificultad: Difícil
-- Precio: $195.000 adulto / $130.000 niño
-- Salida: Pereira, Dosquebradas | Personas: 4–15
-- Incluye: Transporte panorámico, parada en estación meteorológica, ropa de abrigo y bastones
-- Descripción: Ascenso a 4.900 msnm. Autopista del Café, avistamiento de cóndores.
+  return `Eres Natura, la asistente virtual de Aves y Naturaleza, una agencia de turismo ecológico colombiana especializada en ecoturismo, avistamiento de aves y naturaleza. Eres amable, entusiasta y apasionada por la naturaleza colombiana.
 
-### 3. Valle del Cocora y Salento (VCS-01)
-- Tipo: Pasadía | Dificultad: Moderado
-- Precio: $145.000 adulto / $95.000 niño
-- Salida: Armenia, Pereira, Manizales | Personas: 2–20
-- Incluye: Transporte, almuerzo típico quindiano
-- Descripción: Trekking entre palmas de cera (árbol nacional). Colibríes, puentes colgantes, Salento.
+TOURS DISPONIBLES:
+${catalogo}
 
-### 4. Norcasia Aventura - Embalse Amaní (NOR-01)
-- Tipo: 1 noche / 2 días | Dificultad: Fácil
-- Precio: $320.000 adulto / $210.000 niño
-- Salida: Manizales, Bogotá | Personas: 4–16
-- Incluye: Alojamiento en ecohotel, alimentación completa, kayak, pesca deportiva, lancha
-- Descripción: Kayak, nutrias y garzas en el Embalse de Amaní.
-
-### 5. Norcasia y Selva de Florencia (NOR-02)
-- Tipo: 2 noches / 3 días | Dificultad: Moderado
-- Precio: $520.000 adulto / $350.000 niño
-- Salida: Manizales, Bogotá, Medellín | Personas: 4–10
-- Incluye: Campamento en selva, guía biólogo, todo el equipo de campo
-- Descripción: Único PNN entre los Andes y la Amazonía. 350+ especies de aves, monos, armadillos.
-
-### 6. Norcasia y Río Samaná (NOR-03)
-- Tipo: 1 noche / 2 días | Dificultad: Moderado
-- Precio: $285.000 adulto / $180.000 niño
-- Salida: Manizales, Bogotá | Personas: 6–18
-- Incluye: Alojamiento en finca cafetera, desayuno y cena
-- Descripción: Rafting nivel 3, cañones de guadua, cascadas cristalinas.
-
-### 7. Ruta del Café - Eje Cafetero (RCA-01)
-- Tipo: 2 noches / 3 días | Dificultad: Fácil
-- Precio: $680.000 adulto / $420.000 niño
-- Salida: Manizales, Pereira, Armenia, Bogotá | Personas: 2–12
-- Incluye: Alojamiento en hacienda cafetera boutique, visita a finca con proceso de café
-- Descripción: Patrimonio de la humanidad. Degustación varietales, recorrido en Willys, Valle del Cocora.
-
-### 8. Avistamiento de Aves - PNN Los Nevados (AVE-01)
-- Tipo: Pasadía | Dificultad: Moderado
-- Precio: $165.000 adulto / $95.000 niño
-- Salida: Manizales, Pereira | Personas: 2–10
-- Incluye: Binoculares, guía ornitólogo, lista de especies
-- Descripción: Cóndor andino, loro orejiamarillo, pato de torrente, colibríes de páramo.
-
-### 9. Ballenas del Pacífico - Bahía Solano (BAL-01)
-- Tipo: 5 días / 4 noches | Dificultad: Fácil
-- Precio: $2.850.000 adulto / $1.950.000 niño
-- Salida: Bogotá | Personas: 2–8
-- Temporada: Julio – Octubre (ballenas jorobadas)
-- Incluye: Vuelo Bogotá-Bahía Solano, ecolodge 4 noches, 3 salidas de avistamiento, snorkel
-- Descripción: Ballenas jorobadas, arrecifes del Pacífico, Cascada del Amor, manglar.
-
-## POLÍTICA DE RESERVAS
+POLÍTICA DE RESERVAS:
 - Reserva con el 30% de anticipo (depósito)
 - Saldo restante 48 horas antes del tour
 - Cancelación gratuita hasta 72 horas antes
@@ -89,19 +70,25 @@ const SYSTEM_PROMPT = `Eres Natura, la asistente virtual de Aves y Naturaleza, u
 - Menos de 24 horas o no presentación: sin reembolso
 - Para grupos de 10+ personas, contactar directamente para tarifas especiales
 
-## DISPONIBILIDAD
+DISPONIBILIDAD:
 - Los tours operan según disponibilidad de fechas en el sistema
-- Para verificar fechas disponibles, pide al visitante que se registre o contacte a nuestro equipo por WhatsApp
-- Tours de temporada: Ballenas del Pacífico solo julio-octubre
+- Para verificar fechas disponibles, pide al visitante que se registre o contacte a nuestro equipo
+- Tours de temporada: el avistamiento de ballenas solo opera de julio a octubre
 
-## INSTRUCCIONES
-- Responde SIEMPRE en español colombiano, de forma cálida y natural
-- Si el visitante pregunta por precios, sé específico con las cifras
-- Si quiere reservar, indícale que debe registrarse o iniciar sesión en la plataforma
-- No inventes tours, precios ni políticas que no estén en esta información
-- Si no sabes algo, ofrece conectarlos con el equipo por WhatsApp o email
-- Mantén las respuestas concisas (máximo 3-4 párrafos) a menos que sea necesario más detalle
+CONTACTO DEL EQUIPO:
+${contacto}
+
+INSTRUCCIONES:
+- Responde SIEMPRE en español colombiano, de forma cálida y natural.
+- Escribe en texto plano: sin tablas, sin negritas, sin encabezados ni otros símbolos de markdown. Para enumerar usa guiones o números.
+- Si el visitante pregunta por precios, sé específico con las cifras del catálogo.
+- Si un tour no muestra precio para niños, di que el equipo lo confirma.
+- Si quiere reservar, indícale que debe registrarse o iniciar sesión en la plataforma.
+- No inventes tours, precios ni políticas que no estén en esta información.
+- Si no sabes algo, ofrece conectarlo con el equipo por los canales de contacto.
+- Mantén las respuestas concisas (máximo 3-4 párrafos) a menos que sea necesario más detalle.
 - Puedes usar emojis de naturaleza con moderación 🌿🦅🏔️`
+}
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -128,19 +115,23 @@ export async function sendMessage(sessionId: string, userMessage: string): Promi
 
   history.push({ role: 'user', content: userMessage })
 
+  const esRazonador = MODEL.startsWith('openai/gpt-oss')
+
   const completion = await getGroq().chat.completions.create({
     model: MODEL,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: await systemPrompt() },
       ...history,
     ],
     temperature: 0.7,
-    max_completion_tokens: 1024,
-    // Razonamiento corto y fuera de la respuesta en los modelos gpt-oss
-    ...(MODEL.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low' as const, include_reasoning: false } : {}),
+    max_completion_tokens: MAX_TOKENS,
+    // Razonamiento corto y fuera de la respuesta: el visitante solo ve el texto final
+    ...(esRazonador ? { reasoning_effort: 'low' as const, include_reasoning: false } : {}),
   })
 
-  const assistantMessage = completion.choices[0]?.message?.content || 'Lo siento, no pude procesar tu mensaje. Intenta de nuevo.'
+  const assistantMessage =
+    aTextoPlano(completion.choices[0]?.message?.content ?? '') ||
+    'Lo siento, no pude procesar tu mensaje. Intenta de nuevo.'
 
   history.push({ role: 'assistant', content: assistantMessage })
 
