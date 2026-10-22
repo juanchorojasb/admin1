@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Sidebar } from './Sidebar'
 import { getDashboardPath } from '@/lib/utils'
+import { rutaLogin } from '@/lib/navegacion'
 import type { UserRole } from '@/types'
 
 interface DashboardLayoutProps {
@@ -18,7 +19,8 @@ export function DashboardLayout({ children, requiredRole }: DashboardLayoutProps
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
-      router.replace('/auth/login')
+      // Después de iniciar sesión se vuelve a la página que se intentaba abrir
+      router.replace(rutaLogin(window.location.pathname + window.location.search))
       return
     }
     if (requiredRole && user.role !== requiredRole && user.role !== 'admin') {

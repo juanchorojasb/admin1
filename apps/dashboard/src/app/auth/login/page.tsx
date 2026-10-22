@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -11,6 +11,7 @@ import { Eye, EyeOff, Leaf } from 'lucide-react'
 import { apiClient } from '@/lib/api/client'
 import { useAuthStore } from '@/lib/auth/store'
 import { getDashboardPath } from '@/lib/utils'
+import { leerDestino, rutaRegistro } from '@/lib/navegacion'
 import type { User, AuthTokens } from '@/types'
 
 const loginSchema = z.object({
@@ -24,6 +25,9 @@ export default function LoginPage() {
   const router = useRouter()
   const setAuth = useAuthStore((s) => s.setAuth)
   const [showPass, setShowPass] = useState(false)
+  // Ruta a la que se vuelve después de entrar (?next=), por ejemplo una reserva
+  const [destino, setDestino] = useState<string | null>(null)
+  useEffect(() => setDestino(leerDestino()), [])
 
   const {
     register,
@@ -39,10 +43,11 @@ export default function LoginPage() {
       )
       setAuth(res.data.data.user, res.data.data.tokens)
       toast.success(`Bienvenido, ${res.data.data.user.firstName}`)
-      router.push(getDashboardPath(res.data.data.user.role))
+      router.push(leerDestino() ?? getDashboardPath(res.data.data.user.role))
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : 'Credenciales incorrectas'
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'No se pudo iniciar sesión'
       toast.error(message)
     }
   }
@@ -99,7 +104,13 @@ export default function LoginPage() {
 
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Iniciar sesión</h2>
-            <p className="mt-1 text-gray-500">Accede a tu panel personalizado</p>
+            <p className="mt-1 text-gray-500">
+              {destino?.startsWith('/reservas')
+                ? 'Entra o crea una cuenta para continuar con tu reserva'
+                : destino
+                  ? 'Entra para continuar donde ibas'
+                  : 'Accede a tu panel personalizado'}
+            </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -145,13 +156,13 @@ export default function LoginPage() {
               disabled={isSubmitting}
               className="btn-primary w-full py-3 text-base"
             >
-              {isSubmitting ? 'Iniciando sesión...' : 'Entrar al panel'}
+              {isSubmitting ? 'Iniciando sesión...' : destino ? 'Entrar y continuar' : 'Entrar al panel'}
             </button>
           </form>
 
           <div className="text-center text-sm text-gray-500">
             ¿No tienes cuenta?{' '}
-            <Link href="/auth/register" className="text-brand-blue font-medium hover:underline">
+            <Link href={rutaRegistro(destino)} className="text-brand-blue font-medium hover:underline">
               Crear cuenta
             </Link>
           </div>

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useAuthStore } from '@/lib/auth/store'
+import { rutaLogin } from '@/lib/navegacion'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
@@ -40,17 +41,22 @@ apiClient.interceptors.response.use(
     const original = error.config
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true
+      const { tokens } = useAuthStore.getState()
+      // Sin sesión no hay nada que renovar: las páginas protegidas ya redirigen al login (DashboardLayout)
+      if (!tokens?.refreshToken) return Promise.reject(error)
       try {
-        const { tokens } = useAuthStore.getState()
         const { data } = await axios.post(`${API_URL}/api/v1/auth/refresh`, {
-          refreshToken: tokens?.refreshToken,
+          refreshToken: tokens.refreshToken,
         })
         useAuthStore.getState().setAuth(data.data.user, data.data.tokens)
         original.headers.Authorization = `Bearer ${data.data.tokens.accessToken}`
         return apiClient(original)
       } catch {
         useAuthStore.getState().clearAuth()
-        window.location.href = '/auth/login'
+        // Sesión vencida: al volver a entrar se regresa a esta misma página
+        if (!window.location.pathname.startsWith('/auth/')) {
+          window.location.href = rutaLogin(window.location.pathname + window.location.search)
+        }
       }
     }
     return Promise.reject(error)

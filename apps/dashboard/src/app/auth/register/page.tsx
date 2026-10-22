@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -9,6 +9,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Leaf } from 'lucide-react'
 import { authApi } from '@/lib/api/endpoints'
+import { leerDestino, rutaLogin } from '@/lib/navegacion'
 
 const registerSchema = z.object({
   firstName: z.string().min(2, 'Nombre muy corto').max(100),
@@ -30,6 +31,9 @@ type RegisterForm = z.infer<typeof registerSchema>
 export default function RegisterPage() {
   const router = useRouter()
   const [showPass, setShowPass] = useState(false)
+  // Se conserva ?next= para volver a la reserva después de iniciar sesión
+  const [destino, setDestino] = useState<string | null>(null)
+  useEffect(() => setDestino(leerDestino()), [])
 
   const {
     register,
@@ -45,8 +49,8 @@ export default function RegisterPage() {
         email: data.email,
         password: data.password,
       })
-      toast.success('Cuenta creada. Ya puedes iniciar sesión.')
-      router.push('/auth/login')
+      toast.success('Cuenta creada. Inicia sesión para continuar.')
+      router.push(rutaLogin(leerDestino()))
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -189,7 +193,7 @@ export default function RegisterPage() {
 
           <div className="text-center text-sm text-gray-500">
             ¿Ya tienes cuenta?{' '}
-            <Link href="/auth/login" className="text-brand-blue font-medium hover:underline">
+            <Link href={rutaLogin(destino)} className="text-brand-blue font-medium hover:underline">
               Iniciar sesión
             </Link>
           </div>
