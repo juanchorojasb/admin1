@@ -67,8 +67,8 @@ export default function AdminReservasPage() {
     {
       key: 'tour',
       header: 'Tour',
-      render: (r: Reservation & { tour_name?: string }) => (
-        <span className="text-sm">{r.tour_name ?? r.tourId?.slice(0, 8)}</span>
+      render: (r: Reservation & { tourName?: string }) => (
+        <span className="text-sm">{r.tourName ?? r.tourId?.slice(0, 8)}</span>
       ),
     },
     {

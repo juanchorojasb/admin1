@@ -18,7 +18,7 @@ export default function ClienteReservasPage() {
   const { data, isLoading } = useReservas({ page, limit: 10 })
   const cancelReservation = useCancelReservation()
 
-  const reservas = (data?.data ?? []) as (Reservation & { tour_name?: string; tour_destination?: string })[]
+  const reservas = (data?.data ?? []) as (Reservation & { tourName?: string; tourDestination?: string })[]
 
   if (isLoading) return <DashboardLayout><PageLoader /></DashboardLayout>
 
@@ -53,14 +53,14 @@ export default function ClienteReservasPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-gray-900">{r.tour_name ?? 'Tour'}</h3>
+                      <h3 className="font-semibold text-gray-900">{r.tourName ?? 'Tour'}</h3>
                       <StatusBadge status={r.status} />
                       <PaymentBadge status={r.paymentStatus} />
                     </div>
                     <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 flex-wrap">
                       <span className="flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5" />
-                        {r.tour_destination ?? r.departureCity}
+                        {r.tourDestination ?? r.departureCity}
                       </span>
                       <span className="flex items-center gap-1">
                         <Users className="w-3.5 h-3.5" />
@@ -109,8 +109,8 @@ export default function ClienteReservasPage() {
           {selected && (
             <div className="space-y-3 text-sm">
               {[
-                { l: 'Tour', v: (selected as { tour_name?: string }).tour_name ?? 'Tour' },
-                { l: 'Destino', v: (selected as { tour_destination?: string }).tour_destination ?? selected.departureCity },
+                { l: 'Tour', v: (selected as { tourName?: string }).tourName ?? 'Tour' },
+                { l: 'Destino', v: (selected as { tourDestination?: string }).tourDestination ?? selected.departureCity },
                 { l: 'Adultos', v: selected.numAdults },
                 { l: 'Niños', v: selected.numChildren },
                 { l: 'Ciudad salida', v: selected.departureCity },
