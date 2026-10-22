@@ -1,6 +1,7 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -9,13 +10,13 @@ import toast from 'react-hot-toast'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { WompiButton } from '@/components/ui/WompiButton'
 import { PageLoader } from '@/components/ui/LoadingSpinner'
-import { useTour } from '@/hooks/useTours'
+import { useTour, useTourAvailability } from '@/hooks/useTours'
 import { useCreateReservation } from '@/hooks/useReservas'
 import { useWompiPayment } from '@/hooks/useWompi'
 import { useAuthStore } from '@/lib/auth/store'
-import { formatCOP, formatDate } from '@/lib/utils'
+import { aNumero, fechaCalendario } from '@/lib/experiencias'
+import { formatCOP } from '@/lib/utils'
 import { CalendarDays, Users, MapPin, ChevronRight, AlertCircle, CheckCircle } from 'lucide-react'
-import type { TourAvailability } from '@/types'
 
 const schema = z.object({
   numAdults: z.number().int().min(1, 'Mínimo 1 adulto'),
@@ -48,9 +49,20 @@ function NuevaReservaContent() {
     id: string; reservationNumber: string; totalAmount: number; depositAmount: number
   } | null>(null)
   const [wompiConfig, setWompiConfig] = useState<object | null>(null)
-  const [selectedAvail] = useState<TourAvailability | null>(null)
 
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
+  // Fecha elegida en la página de la experiencia (?avail=)
+  const { data: fechas, isLoading: cargandoFechas } = useTourAvailability(availId ? (tour?.id ?? '') : '')
+  const selectedAvail = availId ? (fechas ?? []).find((f) => f.id === availId) ?? null : null
+  const fechaNoDisponible = Boolean(availId) && fechas !== undefined && selectedAvail === null
+  // Mientras llega la fecha no se muestra el formulario: así el precio y la ciudad no cambian en pantalla
+  const esperandoFecha = Boolean(availId) && cargandoFechas
+
+  // Sin ciudades de salida (experiencias en el lugar), el punto de encuentro es el destino
+  const ciudadesTour = (tour?.departureCities ?? []).filter(Boolean)
+  const ciudades = Array.from(new Set([...ciudadesTour, selectedAvail?.departureCity ?? ''].filter(Boolean)))
+  const opcionesCiudad = ciudades.length > 0 ? ciudades : tour ? [tour.destination] : []
+
+  const { register, handleSubmit, watch, setValue, getValues, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       numAdults: 1, numChildren: 0, paymentType: 'deposit',
@@ -60,11 +72,23 @@ function NuevaReservaContent() {
     },
   })
 
+  // Preseleccionar la ciudad de la fecha elegida, o la única opción disponible
+  const ciudadPreferida = esperandoFecha
+    ? ''
+    : selectedAvail?.departureCity || (opcionesCiudad.length === 1 ? opcionesCiudad[0] : '')
+  const opcionesClave = opcionesCiudad.join('|')
+  useEffect(() => {
+    if (!ciudadPreferida) return
+    const actual = getValues('departureCity')
+    if (!actual || !opcionesClave.split('|').includes(actual)) setValue('departureCity', ciudadPreferida)
+  }, [ciudadPreferida, opcionesClave, getValues, setValue])
+
   const numAdults = watch('numAdults') || 1
   const numChildren = watch('numChildren') || 0
   const paymentType = watch('paymentType')
-  const unitPrice = selectedAvail?.priceOverride ?? tour?.basePrice ?? 0
-  const childPrice = tour?.priceChild ?? unitPrice * 0.7
+  // Mismo cálculo que el API (reservas.service): precio de la fecha si tiene uno propio
+  const unitPrice = aNumero(selectedAvail?.priceOverride) ?? aNumero(tour?.basePrice) ?? 0
+  const childPrice = aNumero(tour?.priceChild) ?? unitPrice * 0.7
   const total = numAdults * unitPrice + numChildren * childPrice
   const deposit = Math.ceil(total * 0.3)
   const payAmount = paymentType === 'full' ? total : deposit
@@ -72,7 +96,7 @@ function NuevaReservaContent() {
   const onSubmit = async (data: FormData) => {
     try {
       const res = await createReservation.mutateAsync({
-        tourId, availabilityId: selectedAvail?.id ?? availId,
+        tourId: tour?.id ?? tourId, availabilityId: selectedAvail?.id,
         numAdults: data.numAdults, numChildren: data.numChildren,
         departureCity: data.departureCity, contactName: data.contactName,
         contactPhone: data.contactPhone, contactEmail: data.contactEmail,
@@ -91,7 +115,7 @@ function NuevaReservaContent() {
     } catch { /* Error manejado por el hook */ }
   }
 
-  if (tourLoading) return <PageLoader />
+  if (tourLoading || esperandoFecha) return <PageLoader />
   if (!tour) return <p className="text-center py-20 text-gray-400">Tour no encontrado</p>
 
   if (step === 'success') {
@@ -113,10 +137,19 @@ function NuevaReservaContent() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-2 text-sm text-gray-400">
-        <span>Tours</span><ChevronRight className="w-4 h-4" />
-        <span className="text-gray-900 font-medium">{tour.name}</span><ChevronRight className="w-4 h-4" />
+        <Link href="/experiencias" className="hover:text-gray-600">Experiencias</Link><ChevronRight className="w-4 h-4" />
+        <Link href={`/experiencias/${tour.slug}`} className="text-gray-900 font-medium hover:text-brand-blue">{tour.name}</Link><ChevronRight className="w-4 h-4" />
         <span className="text-brand-blue">Reservar</span>
       </div>
+      {fechaNoDisponible && (
+        <div className="flex items-start gap-2 p-4 bg-yellow-50 rounded-xl text-sm text-yellow-800">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <p>
+            La fecha que elegiste ya no está disponible.{' '}
+            <Link href={`/experiencias/${tour.slug}`} className="font-semibold underline">Elige otra fecha</Link>
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <div className="md:col-span-3 space-y-4">
           <div className="card">
@@ -134,10 +167,10 @@ function NuevaReservaContent() {
                 </div>
               </div>
               <div>
-                <label className="label">Ciudad de salida</label>
+                <label className="label">{ciudades.length > 0 ? 'Ciudad de salida' : 'Punto de encuentro'}</label>
                 <select {...register('departureCity')} className="input">
                   <option value="">Selecciona...</option>
-                  {(tour.departureCities ?? []).map((city) => <option key={city} value={city}>{city}</option>)}
+                  {opcionesCiudad.map((city) => <option key={city} value={city}>{city}</option>)}
                 </select>
                 {errors.departureCity && <p className="text-xs text-red-500 mt-1">{errors.departureCity.message}</p>}
               </div>
@@ -199,7 +232,8 @@ function NuevaReservaContent() {
               </div>
               {selectedAvail && (
                 <div className="flex items-center gap-2 text-gray-500">
-                  <CalendarDays className="w-4 h-4" />{formatDate(selectedAvail.date)}
+                  <CalendarDays className="w-4 h-4" />
+                  <span className="inline-block first-letter:uppercase">{fechaCalendario(selectedAvail.date, { weekday: 'long', month: 'long', year: 'numeric' })}</span>
                 </div>
               )}
               <div className="flex items-center gap-2 text-gray-500">
@@ -213,7 +247,7 @@ function NuevaReservaContent() {
               </div>
             </div>
             {step === 'form' ? (
-              <button type="submit" form="reservation-form" disabled={isSubmitting} className="btn-primary w-full mt-4 py-3">
+              <button type="submit" form="reservation-form" disabled={isSubmitting || fechaNoDisponible} className="btn-primary w-full mt-4 py-3">
                 {isSubmitting ? 'Creando reserva...' : 'Continuar al pago'}
               </button>
             ) : (
