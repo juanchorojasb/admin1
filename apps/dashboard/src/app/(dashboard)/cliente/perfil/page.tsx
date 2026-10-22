@@ -35,7 +35,8 @@ export default function ClientePerfilPage() {
 
   const { register: rp, handleSubmit: hsp, formState: { errors: ep } } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', phone: user?.phone ?? '' },
+    // values (no defaultValues): al recargar, los datos de la sesión llegan después del primer render
+    values: { firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', phone: user?.phone ?? '' },
   })
 
   const { register: rpass, handleSubmit: hspass, formState: { errors: epass }, reset: resetPass } = useForm<PassForm>({

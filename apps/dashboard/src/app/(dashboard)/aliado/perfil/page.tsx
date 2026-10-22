@@ -62,7 +62,8 @@ export default function AliadoPerfilPage() {
 
   const { register: rp, handleSubmit: hsp } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', phone: user?.phone ?? '' },
+    // values (no defaultValues): al recargar, los datos de la sesión llegan después del primer render
+    values: { firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', phone: user?.phone ?? '' },
   })
 
   const { register: rb, handleSubmit: hsb, formState: { errors: eb } } = useForm<BusinessForm>({
