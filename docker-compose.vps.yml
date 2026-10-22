@@ -80,6 +80,8 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       NEXT_PUBLIC_APP_NAME: Aves y Naturaleza
+      # Render en servidor (página de detalle de tours): el API por la red interna de Docker
+      API_INTERNAL_URL: http://api:4000
     depends_on:
       - api
 

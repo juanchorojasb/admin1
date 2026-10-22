@@ -84,7 +84,10 @@ export interface Tour {
   gallery?: string[]
   isActive: boolean
   isFeatured: boolean
+  seoTitle?: string
+  seoDescription?: string
   createdAt: string
+  updatedAt?: string
 }
 
 export interface TourAvailability {

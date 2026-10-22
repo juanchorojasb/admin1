@@ -1,22 +1,9 @@
 import axios from 'axios'
 import { useAuthStore } from '@/lib/auth/store'
 import { rutaLogin } from '@/lib/navegacion'
+import { toCamel } from './camel'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
-
-function camelize(str: string): string {
-  return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
-}
-
-function toCamel(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(toCamel)
-  if (value !== null && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([k, v]) => [camelize(k), toCamel(v)])
-    )
-  }
-  return value
-}
 
 export const apiClient = axios.create({
   baseURL: `${API_URL}/api/v1`,
