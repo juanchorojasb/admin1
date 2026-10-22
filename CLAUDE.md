@@ -132,6 +132,12 @@ Copy `.env.example` to `.env`. Key groups:
 
 ---
 
-## No Tests
+## Pruebas
 
-No test framework is configured. There are no test scripts or test files.
+No hay pruebas unitarias. Hay una prueba en navegador real contra el sitio publicado, para correr después de cada despliegue:
+
+```bash
+cd ~/avn && bash scripts/pruebas/correr.sh
+```
+
+`scripts/pruebas/sesion.ts` (Playwright) recorre catálogo, detalle, registro, login con regreso, F5 en el panel, perfil, reserva sin enviarla y sesión vencida. Usa un cliente temporal que `correr.sh` borra al final; no crea reservas ni pagos. Chromium corre en un contenedor desechable (imagen `mcr.microsoft.com/playwright`, unos 2 GB la primera vez). Termina con código 1 si algo falla.
