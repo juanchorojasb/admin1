@@ -16,7 +16,10 @@ export async function getOne(req: Request, res: Response) {
     const tour = await toursService.getTourById(req.params.id)
     return ok(res, tour)
   } catch (err) {
-    return notFound(res, (err as Error).message)
+    if ((err as Error).message === toursService.TOUR_NO_ENCONTRADO) return notFound(res, toursService.TOUR_NO_ENCONTRADO)
+    // Un error de base de datos no es un 404: se registra y no se exponen detalles de SQL
+    console.error('[tours] Error al consultar el tour:', err)
+    return serverError(res)
   }
 }
 

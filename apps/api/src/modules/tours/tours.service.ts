@@ -24,10 +24,11 @@ export async function listTours(req: Request) {
   const countRow = await queryOne<{ count: string }>(`SELECT COUNT(*) as count FROM tours t ${where}`, params)
   const total = parseInt(countRow?.count ?? '0')
 
-  const tours = await query<Tour & { includes: object }>(
-    `SELECT t.*, ti.*
+  // "incluye" viene de tours.includes (JSONB): es lo que leen el formulario del admin, la página
+  // de detalle y Natura. tour_includes se sigue escribiendo para el detalle de reservas.
+  const tours = await query<Tour>(
+    `SELECT t.*
      FROM tours t
-     LEFT JOIN tour_includes ti ON ti.tour_id = t.id
      ${where}
      ORDER BY t.is_featured DESC, t.created_at DESC
      LIMIT $${i} OFFSET $${i + 1}`,
@@ -37,15 +38,17 @@ export async function listTours(req: Request) {
   return { data: tours, total, page, limit }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export const TOUR_NO_ENCONTRADO = 'Tour no encontrado'
+
 export async function getTourById(idOrSlug: string) {
-  const tour = await queryOne<Tour>(
-    `SELECT t.*, ti.*
-     FROM tours t
-     LEFT JOIN tour_includes ti ON ti.tour_id = t.id
-     WHERE t.id = $1 OR t.slug = $1`,
-    [idOrSlug]
-  )
-  if (!tour) throw new Error('Tour no encontrado')
+  // Una sola consulta con "t.id = $1 OR t.slug = $1" falla en PostgreSQL: el parámetro se deduce
+  // como uuid y luego no se puede comparar con slug (varchar). Se busca por id o por slug según el valor.
+  const tour = UUID_RE.test(idOrSlug)
+    ? await queryOne<Tour>('SELECT t.* FROM tours t WHERE t.id = $1', [idOrSlug])
+    : await queryOne<Tour>('SELECT t.* FROM tours t WHERE t.slug = $1', [idOrSlug])
+  if (!tour) throw new Error(TOUR_NO_ENCONTRADO)
   return tour
 }
 
@@ -60,8 +63,8 @@ export async function createTour(dto: CreateTourDto) {
         itinerary, excludes, recommendations, restrictions, what_to_bring,
         base_price, price_child, departure_cities, duration_days,
         min_persons, max_persons, difficulty, cover_image, gallery,
-        is_featured, seo_title, seo_description
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+        is_featured, seo_title, seo_description, includes
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
       RETURNING *`,
       [
         dto.slug, dto.name, dto.internalName ?? null, dto.tourType, dto.destination,
@@ -78,6 +81,7 @@ export async function createTour(dto: CreateTourDto) {
         dto.gallery ? JSON.stringify(dto.gallery) : null,
         dto.isFeatured ?? false,
         dto.seoTitle ?? null, dto.seoDescription ?? null,
+        dto.includes ? JSON.stringify(dto.includes) : null,
       ]
     )
 
@@ -122,6 +126,7 @@ export async function updateTour(id: string, dto: UpdateTourDto) {
       cover_image: dto.coverImage,
       gallery: dto.gallery ? JSON.stringify(dto.gallery) : undefined,
       is_featured: dto.isFeatured, seo_title: dto.seoTitle, seo_description: dto.seoDescription,
+      includes: dto.includes ? JSON.stringify(dto.includes) : undefined,
     }
 
     for (const [col, val] of Object.entries(mappings)) {
