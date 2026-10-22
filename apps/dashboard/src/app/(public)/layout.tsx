@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 import { getDashboardPath } from '@/lib/utils'
 import { useSiteConfig } from '@/hooks/useSiteConfig'
 import { Instagram, Facebook, Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const NAV_LINKS = [
   { href: '/', label: 'Inicio' },
@@ -34,9 +34,16 @@ const D_CONTACTO: ContactoData = {
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, isLoggedIn } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
   const { data: siteConfig } = useSiteConfig()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  // La sesión se guarda en localStorage: se aplica después de montar para que el HTML del servidor
+  // y el primer render del navegador coincidan
+  const [montado, setMontado] = useState(false)
+  useEffect(() => setMontado(true), [])
+  const conSesion = montado && isAuthenticated && user !== null
+  const esActivo = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(`${href}/`))
 
   const footer = (siteConfig?.footer as FooterData) ?? D_FOOTER
   const contacto = (siteConfig?.contacto as ContactoData) ?? D_CONTACTO
@@ -57,7 +64,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                 key={link.href}
                 href={link.href}
                 className={`transition-colors ${
-                  pathname === link.href ? 'text-brand-green font-semibold' : 'text-gray-600 hover:text-brand-blue'
+                  esActivo(link.href) ? 'text-brand-green font-semibold' : 'text-gray-600 hover:text-brand-blue'
                 }`}
               >
                 {link.label}
@@ -66,14 +73,14 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           </div>
 
           <div className="flex items-center gap-3">
-            {isLoggedIn ? (
-              <button onClick={() => router.push(getDashboardPath(user!.role))} className="btn-primary text-sm">
+            {conSesion ? (
+              <button onClick={() => router.push(getDashboardPath(user.role))} className="btn-primary text-sm">
                 Mi cuenta
               </button>
             ) : (
               <>
                 <Link href="/auth/login" className="hidden md:block text-sm font-medium text-gray-600 hover:text-brand-blue">Ingresar</Link>
-                <Link href="/auth/login" className="btn-primary text-sm">Reservar</Link>
+                <Link href="/experiencias" className="btn-primary text-sm">Reservar</Link>
               </>
             )}
             <button
@@ -96,7 +103,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                    pathname === link.href ? 'bg-brand-green/10 text-brand-green' : 'text-gray-700 hover:bg-gray-50'
+                    esActivo(link.href) ? 'bg-brand-green/10 text-brand-green' : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   {link.label}
