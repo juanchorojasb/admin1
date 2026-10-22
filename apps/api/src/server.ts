@@ -42,6 +42,10 @@ app.use(rateLimit({
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
+  // Las consultas internas del dashboard (render en servidor por la red de Docker) no pasan por Nginx
+  // y no traen X-Forwarded-For; sin esta excepción compartirían un solo cupo para todo el sitio.
+  // Desde fuera no se puede llegar sin Nginx: el puerto del API solo escucha en 127.0.0.1.
+  skip: (req) => req.headers['x-forwarded-for'] === undefined,
 }))
 
 // Healthcheck
@@ -57,7 +61,12 @@ app.get('/health', async (_req, res) => {
 // Archivos subidos (imágenes del sitio)
 const uploadsDir = path.join(process.cwd(), 'uploads')
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true })
-app.use('/api/uploads', express.static(uploadsDir))
+// helmet pone Cross-Origin-Resource-Policy: same-origin, que bloquea las fotos si la página se abre
+// en www.avesynaturaleza.uno y la imagen está en avesynaturaleza.uno. same-site permite ambos.
+app.use('/api/uploads', (_req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-site')
+  next()
+}, express.static(uploadsDir))
 
 // Rutas API v1
 const v1 = '/api/v1'
